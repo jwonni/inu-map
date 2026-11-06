@@ -22,7 +22,8 @@ const BUILDINGS = [
     floors: [{ name: 'B1', label: '주차장' }, ...floorsOf(['1F', '2F', '3F', '4F', '5F'])],
   },
   // 도서관: 정보기술대학과 5호관 사이 큰 건물. 윤곽은 EXTRA 에서 옮겨옴
-  { id: 'lib', name: '도서관', sub: '',                 x: 644, y: 441, w: 80, h: 58, rot: 36, color: '#ffe08a',
+  // 6호관. 윤곽(36°, 80×58)에 안내도를 반시계 90° 돌려 맞춤: 레이아웃 x축 = 윤곽 짧은 변(-54°)
+  { id: 'lib', name: '도서관', sub: '6호관',             x: 644, y: 441, w: 58, h: 80, rot: -54, color: '#ffe08a',
     defaultFloor: '1F', floors: [{ name: 'B1', label: '열람실' }, ...floorsOf(['1F', '2F', '3F', '4F'])] },
   { id: 'b1',  name: '1호관',  sub: '대학본부',         x: 676, y: 270, w: 70, h: 38, rot: AX, color: '#ffb66b', floors: defaultFloors() },
   { id: 'b2',  name: '2호관',  sub: '교수회관',         x: 608, y: 200, w: 56, h: 36, rot: AX, floors: defaultFloors() },
