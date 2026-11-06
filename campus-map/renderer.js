@@ -39,9 +39,9 @@
   const PLANS = typeof FLOORPLANS !== 'undefined' ? FLOORPLANS : {};
 
   const C = {
-    forest: '#a8d98a', forestDark: '#7fbf63', campus: '#e8f3dc',
-    park: '#b9e0a1', water: '#8fd0f5', waterDeep: '#64b8ec', city: '#ecebe6', cityBlock: '#d9d7cf',
-    road: '#fff7e6', roadEdge: '#4a4a4a', outline: '#3b3b3b', side: '#b8b3a8',
+    forest: '#b7cc9e', forestDark: '#8fa97a', campus: '#edf1df',
+    park: '#c4d5ad', water: '#b5d6dd', waterDeep: '#8fb8c5', city: '#eeeee5', cityBlock: '#dedfd2',
+    road: '#fffaf0', roadEdge: '#7c8974', outline: '#5a6d55', side: '#bec1b0',
     bldg: ['#ffffff', '#f3f6ff', '#fdf3e7', '#eefaf0'],
   };
 
@@ -288,6 +288,8 @@
       const fs = Math.max(1.1, Math.min(len / (String(c.id).length * 0.62 + 0.6), thick * 0.72, c.kind === 'area' ? 4 : 3.2));
       text(rg, px(c.x) + w / 2, py(c.y) + h / 2, c.id, fs, '', fixAngle(rot, vertical ? -90 : 0));
       rg.addEventListener('click', (e) => { e.stopPropagation(); onRoomClick && onRoomClick(c.id, rg); });
+      rg.setAttribute('role', 'button');
+      rg.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onRoomClick && onRoomClick(c.id, rg); } });
       rooms[c.id] = rg;
     });
 

@@ -41,7 +41,8 @@
       zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
     }, { passive: false });
     container.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('button, .floor-picker')) return;
+      moved = false;
+      if (e.target.closest('button, .floor-picker, .event-marker') || window.campusEventPlacement) return;
       drag = { x: e.clientX, y: e.clientY, sx: s.x, sy: s.y };
       moved = false;
     });
@@ -158,6 +159,7 @@
     const hasPlan = b.floors.some((f) => hasFloorplan(b.id, f.name));
     mapPZ.centerOn(b.x, b.y, hasPlan ? INDOOR_ZOOM : Math.max(mapPZ.state.scale, 1.5));
     selectFloor(floorIdx);
+    announceLocation();
   }
   // 위/아래 화살표: 한 층씩 이동
   $('#fpUp').addEventListener('click', () => current && selectFloor(Math.min(current.floors.length - 1, currentFloor + 1)));
@@ -172,6 +174,7 @@
       $('#roomWhere').textContent = `${current.floors[currentFloor].name}`;
       roomInfo.classList.add('show');
     } else roomInfo.classList.remove('show');
+    announceLocation(id);
   }
 
   function selectFloor(i) {
@@ -189,13 +192,16 @@
     rooms = null; activeRoom = null;
     roomInfo.classList.remove('show');
     if (hasFloorplan(current.id, f.name)) {
-      rooms = renderIndoor(current.id, f.name, (id) => highlightRoom(id));
+      rooms = renderIndoor(current.id, f.name, (id) => { if (!mapPZ.wasDragged()) highlightRoom(id); });
       roomHint.classList.remove('show');
     } else {
       clearIndoor(current.id);
       roomHint.textContent = '호실 정보 없음';
       roomHint.classList.add('show');
     }
+    // 층을 바꾸면 이전 호실 선택도 해제합니다.
+    updateGuide();
+    if (window.campusEventEditing) announceLocation();
   }
 
   function closePanel() {
@@ -207,13 +213,14 @@
     roomInfo.classList.remove('show');
     pin.style.display = 'none';
     current = null;
+    updateGuide();
     history.replaceState(null, '', location.pathname);
   }
   $('#closeBtn').addEventListener('click', closePanel);
 
   // 키보드: ESC 닫기, ←/→ 층 이동
   document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.closest('input, textarea, select, button, #eventSidebar')) return;
     if (e.key === 'Escape') closePanel();
     if (!current) return;
     if (e.key === 'ArrowRight' || e.key === 'ArrowUp') selectFloor(Math.min(current.floors.length - 1, currentFloor + 1));
@@ -288,6 +295,48 @@
     } else return;
     items.forEach((li, i) => li.classList.toggle('active', i === activeIdx));
   });
+
+  function updateGuide(roomId) {
+    const b = current;
+    $('#guideBadge').textContent = b ? ((b.sub.match(/(\d+)호관/) || b.name.match(/(\d+)호관/))?.[1] || 'INU').padStart(2, '0') : '07';
+    $('#guideTitle').textContent = b ? b.name : '정보기술대학';
+    $('#guideSubtitle').textContent = b ? [b.sub, b.floors[currentFloor].name].filter(Boolean).join(' · ') : '건물 안까지 이어지는 캠퍼스 지도';
+    $('#enterBuilding').textContent = b ? '캠퍼스 전체로 돌아가기 ↗' : '7호관 내부 보기 ↗';
+    $('#guideDetailTitle').textContent = roomId ? `${roomId}호` : b ? `${b.name} · ${b.floors[currentFloor].name}` : '같은 지도, 더 가까이';
+    $('#guideDetailText').textContent = roomId ? '선택한 호실을 지도에서 강조했습니다. 다른 층도 층 선택기로 확인해 보세요.' : b ? (hasFloorplan(b.id, b.floors[currentFloor].name) ? '호실을 누르면 위치를 확인할 수 있습니다. 층 버튼으로 다른 층을 둘러보세요.' : '이 층의 호실 정보는 준비 중입니다.') : '건물을 누르고 층을 선택해 호실 배치를 확인하세요. 호실 번호로 검색하면 원하는 위치로 바로 이동합니다.';
+    $('#mapCaption').textContent = b ? `${b.name} · ${b.floors[currentFloor].name}` : '캠퍼스 전체';
+    $('#mapSubcaption').textContent = roomId ? `${roomId}호를 선택했습니다` : b ? '호실을 눌러 위치를 확인하세요' : '건물을 클릭하면 실내 지도가 표시됩니다';
+  }
+  $('#enterBuilding').addEventListener('click', () => { if (current) { closePanel(); fitMap(); } else openBuilding('it'); });
+  $('#homeMap').addEventListener('click', () => { closePanel(); fitMap(); });
+  document.querySelectorAll('[data-building]').forEach(button => button.addEventListener('click', () => openBuilding(button.dataset.building)));
+  $('#submitSearch').addEventListener('click', () => { const hits = searchHits(input.value.trim()); if (hits.length) pick(hits[Math.max(0, activeIdx)]); else { input.focus(); renderResults(); } });
+
+  function announceLocation(roomId) {
+    if (!current) return;
+    updateGuide(roomId);
+    const room = roomId && rooms && rooms[roomId];
+    document.dispatchEvent(new CustomEvent('campus-location', { detail: {
+      kind: room ? 'room' : 'building', buildingId: current.id,
+      floor: room ? current.floors[currentFloor].name : '', room: room ? roomId : '',
+      x: room ? +room.dataset.mx : current.x, y: room ? +room.dataset.my : current.y,
+      label: [current.name, current.sub, room ? current.floors[currentFloor].name + ' ' + roomId + '호' : ''].filter(Boolean).join(' · ')
+    }}));
+  }
+  window.campusMap = {
+    fit: fitMap, close: closePanel,
+    center: (x, y) => mapPZ.centerOn(x, y, Math.max(1.3, Math.min(mapPZ.state.scale, 3))),
+    point: (x, y) => { const r = map.getBoundingClientRect(); return { x: (x - r.left) / mapPZ.state.scale, y: (y - r.top) / mapPZ.state.scale }; },
+    wasDragged: mapPZ.wasDragged,
+    openLocation: (location) => {
+      const b = BUILDINGS.find(b => b.id === location.buildingId);
+      if (!b) return;
+      const i = b.floors.findIndex(f => f.name === location.floor);
+      openBuilding(b.id, i < 0 ? undefined : i);
+      if (location.room) highlightRoom(location.room);
+    }
+  };
+  new ResizeObserver(() => { if (!current) fitMap(); }).observe(mapWrap);
 
   // ---------- 초기화 ----------
   fitMap();

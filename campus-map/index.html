@@ -3,32 +3,81 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>인천대학교 캠퍼스 층별 안내</title>
+  <title>캠퍼스 한 걸음 · 인천대학교</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="theme.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="logo">N</span> 캠퍼스 층별 안내</div>
-    <div class="search">
-      <input id="searchInput" type="text" placeholder="건물·호실 검색 (예: 7호관 403호, 14호관 202)" autocomplete="off" />
-      <ul id="searchResults" class="search-results"></ul>
-    </div>
+    <div class="brand"><span class="brand-symbol">✳</span> 캠퍼스 한 걸음 <span class="brand-subtitle">인천대학교 송도캠퍼스</span></div>
+    <nav class="mode-switch" aria-label="화면 선택">
+      <button id="mapMode" class="selected" aria-pressed="true">지도</button>
+      <button id="eventMode" aria-pressed="false">이벤트 <span id="eventCount">0</span></button>
+    </nav>
+    <div class="header-actions"><button id="homeMap">캠퍼스 전체</button><button id="editEvents" class="edit-button" aria-pressed="false">✎ 편집</button></div>
+
   </header>
 
   <main class="layout">
+    <aside class="guide-sidebar" aria-label="캠퍼스 안내">
+      <div id="guideWelcome"><span class="eyebrow">INU · CAMPUS GUIDE</span><h1>어디로 갈까요?</h1></div>
+    <div class="search">
+      <input aria-label="건물 및 호실 검색" id="searchInput" type="text" placeholder="건물·호실 검색 · 예: 7호관 403" autocomplete="off" />
+      <button id="submitSearch" aria-label="검색">검색</button>
+      <ul id="searchResults" class="search-results"></ul>
+    </div>
+      <div id="mapGuide">
+        <p class="guide-message">건물을 선택하면 지도 위에 실내가 펼쳐집니다.</p>
+        <section class="guide-feature"><span id="guideBadge" class="building-badge">07</span><h2 id="guideTitle">정보기술대학</h2><p id="guideSubtitle">건물 안까지 이어지는 캠퍼스 지도</p><button id="enterBuilding" class="primary">7호관 내부 보기 ↗</button></section>
+        <section class="guide-details"><h3 id="guideDetailTitle">같은 지도, 더 가까이</h3><p id="guideDetailText">건물을 누르고 층을 선택해 호실 배치를 확인하세요. 호실 번호로 검색하면 원하는 위치로 바로 이동합니다.</p></section>
+        <section class="guide-links"><span class="eyebrow">QUICK GUIDE</span><button data-building="it"><span>07</span> 정보기술대학 <b>↗</b></button><button data-building="b13"><span>13</span> 13호관 <b>↗</b></button><button data-building="nea"><span>14</span> 경영대학 · 동북아 <b>↗</b></button></section>
+        <div class="guide-sources"><b>캠퍼스를 알아가는 한 걸음</b><p>지도에서 강의실을 찾고, 이벤트에서 오늘 열리는 행사와 새로운 캠퍼스 소식을 만나보세요.</p><p>실내 배치는 건물 안내판을 기준으로 작성했습니다.</p></div>
+      </div>
+    <section id="eventSidebar" class="event-sidebar" aria-label="캠퍼스 이벤트" hidden>
+      <div class="sidebar-heading"><div><span class="eyebrow">CAMPUS EVENTS</span><h1 id="eventHeading">오늘의 이벤트</h1></div><button id="newEvent" class="primary" hidden>＋ 추가</button></div>
+      <p id="eventDate" class="muted"></p>
+      <p id="storageNotice" class="storage-notice" hidden></p>
+      <div id="eventList" class="event-list"></div>
+      <form id="eventForm" hidden>
+        <div class="form-heading"><h2 id="formHeading">새 이벤트</h2><button type="button" id="cancelEvent" class="text-button">취소</button></div>
+        <fieldset><legend>1. 위치 선택</legend>
+          <div class="location-modes"><button type="button" data-location="indoor" class="selected">건물 · 호실</button><button type="button" data-location="outdoor">야외 배너</button></div>
+          <p id="locationHelp" class="muted">상단에서 호실을 검색하거나 지도에서 건물과 호실을 클릭하세요.</p>
+          <output id="chosenLocation" class="chosen-location">선택된 위치 없음</output>
+        </fieldset>
+        <fieldset><legend>2. 배너 디자인</legend><div id="iconPicker" class="icon-picker"></div>
+          <label>배너 크기 <input id="eventSize" type="range" min="20" max="100" value="44"><output id="sizeValue">44</output></label>
+          <div id="positionFields" class="field-row" hidden><label>X 좌표<input id="eventX" type="number" min="0" max="962" step="0.1"></label><label>Y 좌표<input id="eventY" type="number" min="0" max="841" step="0.1"></label></div>
+        </fieldset>
+        <fieldset><legend>3. 이벤트 정보</legend>
+          <label>제목 <input id="eventTitle" required maxlength="80" placeholder="예: 2027학년도 입시 설명회"></label>
+          <label>설명 <textarea id="eventDescription" required maxlength="2000" rows="3" placeholder="참여 방법, 대상, 안내 사항을 적어주세요."></textarea></label>
+          <label>행사 날짜 <input id="eventDay" type="date" required></label>
+          <label class="checkbox-label"><input id="eventAllDay" type="checkbox" checked> 종일 행사</label>
+          <div id="timeFields" class="field-row" hidden><label>시작 시간<input id="eventStart" type="time" value="09:00"></label><label>종료 시간<input id="eventEnd" type="time" value="18:00"></label></div>
+          <p class="muted">한국 시간 기준. 행사 당일 00시부터 지도에 표시됩니다.</p>
+        </fieldset>
+        <p id="formError" class="form-error" role="alert"></p>
+        <div class="form-actions"><button type="submit" class="primary">이벤트 저장</button><button type="button" id="deleteEvent" class="danger" hidden>삭제</button></div>
+      </form>
+      <p class="local-notice">이벤트는 이 브라우저에 저장됩니다.</p>
+    </section>
+    </aside>
     <!-- 메인 지도 -->
     <section class="map-wrap" id="mapWrap">
       <div class="map" id="map">
         <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg" width="962" height="841" role="img" aria-label="인천대학교 송도캠퍼스 카툰 지도"></svg>
         <div class="hotspots" id="hotspots"></div>
+        <div id="eventMarkers" class="event-markers"></div>
       </div>
       <div class="map-controls">
         <button data-zoom="in" title="확대">＋</button>
         <button data-zoom="out" title="축소">－</button>
         <button data-zoom="reset" title="원래대로">⟲</button>
       </div>
-    </section>
-
+      <div class="map-caption"><b id="mapCaption">캠퍼스 전체</b><span id="mapSubcaption">건물을 클릭하면 실내 지도가 표시됩니다</span></div>
+      <div class="map-legend"><span class="legend-dot room-dot"></span> 호실 <span class="legend-dot facility-dot"></span> 편의시설 <span class="legend-dot event-dot"></span> 이벤트</div>
+      <span class="map-attribution">INU · SONGDO CAMPUS</span>
     <!-- 층 선택기 (네이버 실내지도 스타일, 건물을 고르면 지도 오른쪽에 뜸) -->
     <aside class="floor-picker" id="panel" aria-hidden="true">
       <div class="fp-name"><b id="pName">건물명</b><small id="pSub"></small><button class="close" id="closeBtn" title="닫기">✕</button></div>
@@ -38,6 +87,16 @@
       <div class="room-info" id="roomInfo"><b id="roomName"></b><span id="roomWhere"></span></div>
       <div class="room-hint" id="roomHint"></div>
     </aside>
+    </section>
+
+    <article id="eventNote" class="event-note" aria-label="이벤트 상세" hidden>
+      <button id="closeNote" class="note-close" aria-label="이벤트 메모 닫기">×</button>
+      <span class="eyebrow">EVENT NOTE</span><h2 id="noteTitle"></h2>
+      <p id="noteWhen" class="note-when"></p><p id="noteLocation" class="muted"></p>
+      <p id="noteDescription" class="note-description"></p>
+    </article>
+    <div id="eventToast" class="event-toast" role="status" hidden></div>
+
   </main>
 
   <script src="data/buildings.js"></script>
@@ -45,6 +104,8 @@
   <script src="data/footprints.js"></script>
   <script src="data/floorplans.js"></script>
   <script src="renderer.js"></script>
+  <script src="event-rules.js"></script>
   <script src="app.js"></script>
+  <script src="events.js"></script>
 </body>
 </html>
