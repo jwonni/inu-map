@@ -2,9 +2,20 @@
 
 인천대학교 송도캠퍼스의 건물·호실과 오늘 열리는 행사를 찾는 웹 지도입니다. HTML, CSS, JavaScript로 구현했으며 별도 설치나 빌드 없이 실행할 수 있습니다.
 
+## 배포 주소 (GitHub Pages)
+
+- **메인 지도: <https://jwonni.github.io/inu-map/>**
+- 위경도 지도·길찾기: <https://jwonni.github.io/inu-map/inu-campus-map.html>
+- 건물 실내 배치·출입구 검토: <https://jwonni.github.io/inu-map/building-detail.html>
+- 도로망 비교(임시): <https://jwonni.github.io/inu-map/roads.html>
+
+`main` 브랜치에 push하면 [.github/workflows/pages.yml](.github/workflows/pages.yml)이 `campus-map/` 폴더를 자동으로 배포합니다.
+
 ## 실행
 
 저장소를 내려받은 뒤 **[campus-map/index.html](campus-map/index.html)**을 브라우저에서 여세요. 제출 결과물을 확인하는 기본 시작 파일입니다.
+
+Windows에서는 저장소 루트의 `run.bat`을 더블클릭하거나 PowerShell에서 `.\run.ps1`을 실행하면 `main` 최신 코드를 받아 로컬 서버(`http://localhost:8080/`)로 띄웁니다. 받지 않고 현재 코드만 실행하려면 `.\run.ps1 -NoPull`.
 
 VS Code의 Live Server로 실행하거나, 저장소 루트에서 아래 명령으로 로컬 서버를 실행해도 됩니다.
 

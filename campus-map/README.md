@@ -2,6 +2,12 @@
 
 건물과 호실을 찾고 오늘의 행사를 확인하는 캠퍼스 안내 지도입니다. 아이보리 배경과 녹색 안내 패널, SVG 캠퍼스 지도, 층별 호실 배치를 사용합니다.
 
+## 배포 주소
+
+- **<https://jwonni.github.io/inu-map/>** (이 폴더의 `index.html`)
+- 위경도 지도·길찾기: <https://jwonni.github.io/inu-map/inu-campus-map.html>
+- 건물 실내 배치·출입구 검토: <https://jwonni.github.io/inu-map/building-detail.html>
+
 ## 실행 방법
 
 **`index.html`을 브라우저에서 열면 실행됩니다.** 별도 패키지 설치, 빌드, API 키는 필요하지 않습니다.
