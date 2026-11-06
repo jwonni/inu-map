@@ -66,6 +66,7 @@
   const map = $('#map');
   const hotspots = $('#hotspots');
   const INDOOR_ZOOM = 4; // 실내 호실을 보여줄 때 확대 배율
+  const ROOM_ZOOM = 7;   // 호실 검색 결과로 이동할 때 확대 배율
 
   const pin = document.createElement('div');
   pin.className = 'pin';
@@ -224,13 +225,25 @@
   const results = $('#searchResults');
   let activeIdx = -1;
 
-  function searchHits(q) {
-    const hits = BUILDINGS
-      .filter((b) => (b.name + b.sub).replace(/\s/g, '').includes(q))
-      .map((b) => ({ type: 'building', id: b.id, b }));
-    if (/\d/.test(q)) {
-      findRooms(q.toUpperCase()).slice(0, 12).forEach((r) =>
-        hits.push({ type: 'room', id: r.buildingId, floor: r.floor, room: r.room, b: BUILDINGS.find((x) => x.id === r.buildingId) }));
+  // 검색어 해석: "7호관 403호", "정보기술대학 403", "14호관202", "403" 모두 지원
+  //  - 끝에 오는 3자리 이상 숫자(B105, 506-1 포함)를 호실로, 그 앞부분을 건물로 봄
+  const bldgMatches = (b, part) => (b.name + b.sub).replace(/\s/g, '').toUpperCase().includes(part);
+  function searchHits(raw) {
+    const q = raw.replace(/\s/g, '').toUpperCase();
+    const m = q.match(/(B?\d{3,}(?:-\d+)?)호?$/);
+    const roomPart = m ? m[1] : null;
+    const bldgPart = m ? q.slice(0, m.index) : q;
+    const hits = [];
+    if (!roomPart || !bldgPart) {
+      BUILDINGS.filter((b) => bldgMatches(b, q)).forEach((b) => hits.push({ type: 'building', id: b.id, b }));
+    }
+    if (roomPart) {
+      const scope = bldgPart ? BUILDINGS.filter((b) => bldgMatches(b, bldgPart)).map((b) => b.id) : null;
+      findRooms(roomPart)
+        .filter((r) => !scope || scope.includes(r.buildingId))
+        .sort((a, b) => (a.room === roomPart ? 0 : 1) - (b.room === roomPart ? 0 : 1)) // 정확히 일치하는 호실 먼저
+        .slice(0, 12)
+        .forEach((r) => hits.push({ type: 'room', id: r.buildingId, floor: r.floor, room: r.room, b: BUILDINGS.find((x) => x.id === r.buildingId) }));
     }
     return hits;
   }
@@ -257,6 +270,9 @@
     if (h.type === 'room') {
       openBuilding(h.id, h.b.floors.findIndex((f) => f.name === h.floor));
       highlightRoom(h.room);
+      // 찾은 호실이 화면 가운데 오도록 더 확대
+      if (activeRoom && activeRoom.dataset.mx)
+        mapPZ.centerOn(+activeRoom.dataset.mx, +activeRoom.dataset.my, Math.max(mapPZ.state.scale, ROOM_ZOOM));
     } else openBuilding(h.id);
   }
   input.addEventListener('input', renderResults);

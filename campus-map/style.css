@@ -85,7 +85,8 @@ button { font-family: inherit; cursor: pointer; }
 .indoor .room rect { fill: #cfe3ff; stroke: #5c7cae; stroke-width: .35; transition: fill .12s; }
 .indoor .room text { fill: #1f2d4a; font-weight: 700; pointer-events: none; font-family: inherit; }
 .indoor .room:hover rect, .indoor .room:focus-visible rect { fill: #a9ccff; }
-.indoor .room.active rect { fill: #ffd54a; stroke: #c98a00; stroke-width: .6; }
+.indoor .room.active rect { fill: #ffd54a; stroke: #c98a00; stroke-width: .6; animation: room-pulse 1.2s ease-out 2; }
+@keyframes room-pulse { 0% { stroke-width: 2; stroke: #ff7a00; } 100% { stroke-width: .6; stroke: #c98a00; } }
 .indoor .room.area rect { fill: #e3e7ee; stroke: #9aa3b2; stroke-dasharray: 1 .6; }
 .indoor .room.area text { fill: #556; font-weight: 600; }
 .indoor .entrance-lbl { fill: #e74c3c; font-weight: 800; }

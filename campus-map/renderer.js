@@ -146,12 +146,14 @@
     const lowH = U.baseTop - U.wingBottom;
     fixtures.push({ type: 'st', x: 0, y: topA, w: U.colW, h: U.stairsH });
     fixtures.push({ type: 'st', x: 1 - U.colW, y: topB, w: U.colW, h: U.stairsH });
+    // 날개 아래쪽 한 줄: A동 = WC | EV | 계단 , B동 = 계단 | EV | WC  (배치도 순서)
+    const wcW = 0.075, evW = U.wingW - wcW - U.colW; // EV 는 WC 와 안쪽 열 계단 사이(복도 틈 포함)
+    fixtures.push({ type: 'wc', x: 0, y: U.wingBottom, w: wcW, h: lowH });
+    fixtures.push({ type: 'ev', x: wcW, y: U.wingBottom, w: evW, h: lowH });
     fixtures.push({ type: 'st', x: U.wingW - U.colW, y: U.wingBottom, w: U.colW, h: lowH });
     fixtures.push({ type: 'st', x: 1 - U.wingW, y: U.wingBottom, w: U.colW, h: lowH });
-    fixtures.push({ type: 'wc', x: 0, y: U.wingBottom, w: U.colW, h: lowH });
-    fixtures.push({ type: 'wc', x: 1 - U.colW, y: U.wingBottom, w: U.colW, h: lowH });
-    fixtures.push({ type: 'ev', x: U.colW, y: U.wingBottom + lowH * 0.15, w: gapW, h: lowH * 0.7 });
-    fixtures.push({ type: 'ev', x: 1 - U.wingW + U.colW, y: U.wingBottom + lowH * 0.15, w: gapW, h: lowH * 0.7 });
+    fixtures.push({ type: 'ev', x: 1 - wcW - evW, y: U.wingBottom, w: evW, h: lowH });
+    fixtures.push({ type: 'wc', x: 1 - wcW, y: U.wingBottom, w: wcW, h: lowH });
     labels.push({ x: U.wingW / 2, y: 1, dy: 4, text: 'A동' });
     labels.push({ x: 1 - U.wingW / 2, y: 1, dy: 4, text: 'B동' });
     return { cells: splitCells(cells), fixtures, corridors, labels, entrance: fl.entrance ? { x: 0.5, y: 1 } : null };
@@ -272,9 +274,14 @@
     });
 
     const rooms = {};
+    const ca = Math.cos((rot * Math.PI) / 180), sa = Math.sin((rot * Math.PI) / 180);
     built.cells.forEach((c) => {
       const rg = el('g', { class: 'room' + (c.kind === 'area' ? ' area' : ''), 'data-room': c.id, tabindex: 0 }, layer);
       const w = c.w * W, h = c.h * H;
+      // 호실 중심의 지도 좌표 (검색 결과로 바로 이동할 때 사용)
+      const lx = px(c.x) + w / 2, ly = py(c.y) + h / 2;
+      rg.dataset.mx = (b.x + lx * ca - ly * sa).toFixed(1);
+      rg.dataset.my = (b.y + lx * sa + ly * ca).toFixed(1);
       el('rect', { x: px(c.x), y: py(c.y), width: w, height: h, rx: 0.4 }, rg);
       const vertical = h > w * 1.25;
       const len = vertical ? h : w, thick = vertical ? w : h;
