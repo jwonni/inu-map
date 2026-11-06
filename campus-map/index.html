@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>인천대학교 캠퍼스 층별 안내</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">N</span> 캠퍼스 층별 안내</div>
+    <div class="search">
+      <input id="searchInput" type="text" placeholder="건물 검색 (예: 정보기술대학, 8호관)" autocomplete="off" />
+      <ul id="searchResults" class="search-results"></ul>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 메인 지도 -->
+    <section class="map-wrap" id="mapWrap">
+      <div class="map" id="map">
+        <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg" width="962" height="841" role="img" aria-label="인천대학교 송도캠퍼스 카툰 지도"></svg>
+        <div class="hotspots" id="hotspots"></div>
+      </div>
+      <div class="map-controls">
+        <button data-zoom="in" title="확대">＋</button>
+        <button data-zoom="out" title="축소">－</button>
+        <button data-zoom="reset" title="원래대로">⟲</button>
+      </div>
+    </section>
+
+    <!-- 층 선택기 (네이버 실내지도 스타일, 건물을 고르면 지도 오른쪽에 뜸) -->
+    <aside class="floor-picker" id="panel" aria-hidden="true">
+      <div class="fp-name"><b id="pName">건물명</b><small id="pSub"></small><button class="close" id="closeBtn" title="닫기">✕</button></div>
+      <button class="fp-arrow" id="fpUp" title="위층">︿</button>
+      <nav class="floor-tabs" id="floorTabs" aria-label="층 선택"></nav>
+      <button class="fp-arrow" id="fpDown" title="아래층">﹀</button>
+      <div class="room-info" id="roomInfo"><b id="roomName"></b><span id="roomWhere"></span></div>
+      <div class="room-hint" id="roomHint"></div>
+    </aside>
+  </main>
+
+  <script src="data/buildings.js"></script>
+  <script src="data/mapFeatures.js"></script>
+  <script src="data/footprints.js"></script>
+  <script src="data/floorplans.js"></script>
+  <script src="renderer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
