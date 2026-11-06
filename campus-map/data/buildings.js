@@ -21,10 +21,15 @@ const BUILDINGS = [
     defaultFloor: '1F',
     floors: [{ name: 'B1', label: '주차장' }, ...floorsOf(['1F', '2F', '3F', '4F', '5F'])],
   },
+  // 도서관: 정보기술대학과 5호관 사이 큰 건물. 윤곽은 EXTRA 에서 옮겨옴
+  { id: 'lib', name: '도서관', sub: '',                 x: 644, y: 441, w: 80, h: 58, rot: 36, color: '#ffe08a',
+    defaultFloor: '1F', floors: [{ name: 'B1', label: '열람실' }, ...floorsOf(['1F', '2F', '3F', '4F'])] },
   { id: 'b1',  name: '1호관',  sub: '대학본부',         x: 676, y: 270, w: 70, h: 38, rot: AX, color: '#ffb66b', floors: defaultFloors() },
   { id: 'b2',  name: '2호관',  sub: '교수회관',         x: 608, y: 200, w: 56, h: 36, rot: AX, floors: defaultFloors() },
   { id: 'b4',  name: '4호관',  sub: '',                 x: 755, y: 302, w: 58, h: 30, rot: AX, floors: defaultFloors() },
-  { id: 'b5',  name: '5호관',  sub: '',                 x: 691, y: 399, w: 74, h: 44, rot: AX, floors: defaultFloors() },
+  // 5호관: 날개 2개 + C동. 추출 윤곽 장축이 약 37° (캠퍼스 AX 방향). 실내 모드에서 E2 레이아웃
+  { id: 'b5',  name: '5호관',  sub: '',                 x: 672, y: 376, w: 76, h: 62, rot: 37, color: '#f6d6b8',
+    defaultFloor: '1F', floors: floorsOf(['1F', '2F', '3F', '4F', '5F']) },
   // 일자형 막대(장축 약 -40°). 라벨 글자 때문에 추출 윤곽이 잘려서 레이아웃 사각형을 윤곽으로 사용.
   // 로컬 x축 = 남서→북동 (배치도의 왼쪽 101 이 남서쪽 끝)
   { id: 'nea', name: '14호관', sub: '경영대학,동북아', x: 521, y: 293, w: 80, h: 20, rot: -40, color: '#b9a6ff',
@@ -34,14 +39,26 @@ const BUILDINGS = [
     footprint: 'layout', defaultFloor: '1F', floors: [{ name: 'B1' }, ...floorsOf(['1F', '2F', '3F', '4F', '5F'])] },
   // A·B·C동이 동쪽 끝에서 이어진 E자형 한 건물
   // A·B·C동이 동쪽 끝에서 이어진 E자형 한 건물. wings: 각 날개 가운데에 표시할 이름과 좌표
-  { id: 'b8',  name: '8호관',  sub: '',                 x: 526, y: 599, w: 110, h: 90, rot: AX, floors: defaultFloors(),
+  // 레이아웃 x축(A→C 방향) = 지도상 남서→북동(-55°), 날개는 서쪽(장축 방향)으로 뻗음. 실내 모드에서만 E자 사각 레이아웃 사용
+  { id: 'b8',  name: '8호관',  sub: '',                 x: 514, y: 586, w: 128, h: 90, rot: -55, color: '#d9f0c2',
+    defaultFloor: '1F', floors: floorsOf(['1F', '2F', '3F', '4F', '5F']),
     wings: [{ name: 'A동', x: 500, y: 618 }, { name: 'B동', x: 517, y: 578 }, { name: 'C동', x: 545, y: 548 }] },
   { id: 'b9',  name: '9호관',  sub: '',                 x: 582, y: 713, w: 70, h: 42, rot: AX, floors: defaultFloors() },
-  { id: 'b11', name: '11호관', sub: '',                 x: 433, y: 509, w: 80, h: 30, rot: AY, floors: defaultFloors() },
-  { id: 'b12', name: '12호관', sub: '',                 x: 486, y: 433, w: 80, h: 30, rot: AY, floors: defaultFloors() },
-  { id: 'b15', name: '15호관', sub: '',                 x: 451, y: 377, w: 80, h: 30, rot: AY, floors: defaultFloors() },
-  { id: 'b16', name: '16호관', sub: '',                 x: 387, y: 475, w: 60, h: 28, rot: AY, floors: defaultFloors() },
-  { id: 'b17', name: '17호관', sub: '',                 x: 350, y: 525, w: 60, h: 28, rot: AY, floors: defaultFloors() },
+  // 11호관(학생회관): 큰 부정형 건물이라 평소엔 추출 윤곽, 실내 모드에서만 장축(-70°) 기준 사각형 레이아웃
+  { id: 'b11', name: '11호관', sub: '학생회관',         x: 438, y: 495, w: 92, h: 44, rot: -70, color: '#ffc28a',
+    defaultFloor: '1F', floors: floorsOf(['1F', '2F', '3F', '4F']) },
+  // 12호관(컨벤션센터): 라벨에 잘린 윤곽 대신 레이아웃 사각형 사용
+  { id: 'b12', name: '12호관', sub: '컨벤션센터',       x: 491, y: 424, w: 64, h: 22, rot: -52, color: '#f7b7d2',
+    footprint: 'layout', defaultFloor: '1F', floors: floorsOf(['1F', '2F', '3F', '4F', '5F']) },
+  // 15호관(인문대학): 장축 약 -65°. 평소엔 추출 윤곽, 실내 모드에서 사각형 레이아웃
+  { id: 'b15', name: '15호관', sub: '인문대학',         x: 446, y: 380, w: 100, h: 26, rot: -65, color: '#c9b8ff',
+    defaultFloor: '1F', floors: floorsOf(['1F', '2F', '3F', '4F', '5F']) },
+  // 16호관(예능대학): 장축 약 -50°
+  { id: 'b16', name: '16호관', sub: '예능대학',         x: 391, y: 463, w: 76, h: 24, rot: -50, color: '#ffd6a5',
+    defaultFloor: '1F', floors: floorsOf(['1F', '2F', '3F', '4F']) },
+  // 17호관(복지회관): 거의 정사각형 H자형
+  { id: 'b17', name: '17호관', sub: '복지회관',         x: 346, y: 516, w: 52, h: 38, rot: 37, color: '#bde0fe',
+    defaultFloor: '1F', floors: floorsOf(['1F', '2F', '3F', '4F']) },
   { id: 'd1',  name: '18-1호관', sub: '제1기숙사',      x: 285, y: 590, w: 90, h: 60, rot: AX, color: '#ffd36b', floors: defaultFloors() },
   { id: 'b19', name: '19호관', sub: '',                 x: 310, y: 482, w: 54, h: 26, rot: AY, floors: defaultFloors() },
   { id: 'b21', name: '21호관', sub: '',                 x: 313, y: 392, w: 44, h: 26, rot: AX, floors: defaultFloors() },

@@ -181,11 +181,92 @@
     row(fl.top, 0.02);
     row(fl.bottom, 1 - 0.02 - I.rowH);
     (fl.free || []).forEach((c) => cells.push({ ...c }));
-    corridors.push({ x: I.pad, y: I.corrY, w: 1 - 2 * I.pad, h: I.corrH });
+    (fl.fixtures || []).forEach((f) => fixtures.push({ ...f })); // 직접 좌표로 넣는 계단/WC/EV
+    if (fl.corridor !== false) corridors.push({ x: I.pad, y: I.corrY, w: 1 - 2 * I.pad, h: I.corrH });
     return { cells: splitCells(cells), fixtures, corridors, labels, entrance: fl.entrance ? { x: 0, y: 0.5, side: 'left' } : null };
   }
 
-  const LAYOUTS = { U: { outline: U_OUTLINE, build: buildU }, I: { outline: I_OUTLINE, build: buildI } };
+  // E자형: 아래 베이스 복도 + 위로 뻗은 날개 N개(8호관 A·B·C). 날개마다 왼쪽 열(L)/오른쪽 열(R) 아래→위, 꼭대기(top),
+  // 베이스 위쪽 줄(base_top) / 아래쪽 줄(base_bot) 왼쪽→오른쪽, 날개 아래 돌출부(foot). 날개 안쪽 열 맨 위 = 계단+EV, 왼쪽 열 맨 위 = WC(남), 아래 = WC(여)
+  const E = { wingW: 0.20, colW: 0.085, wingTop: 0.04, topH: 0.10, wingBottom: 0.56, baseTop: 0.62, baseH: 0.22, footH: 0.14 };
+  const E_WINGS = [0.0, 0.40, 0.80];
+  const E_OUTLINE = (() => {
+    const pts = [];
+    E_WINGS.forEach((x0, i) => {
+      pts.push([x0, 0], [x0 + E.wingW, 0], [x0 + E.wingW, E.baseTop]);
+      if (i < E_WINGS.length - 1) pts.push([E_WINGS[i + 1], E.baseTop]);
+    });
+    pts.push([1, E.baseTop], [1, E.baseTop + E.baseH], [E_WINGS[2] + E.wingW, E.baseTop + E.baseH], [E_WINGS[2] + E.wingW, 1], [E_WINGS[2], 1], [E_WINGS[2], E.baseTop + E.baseH]);
+    pts.push([E_WINGS[1] + E.wingW, E.baseTop + E.baseH], [E_WINGS[1] + E.wingW, 1], [E_WINGS[1], 1], [E_WINGS[1], E.baseTop + E.baseH]);
+    pts.push([E_WINGS[0] + E.wingW, E.baseTop + E.baseH], [E_WINGS[0] + E.wingW, 1], [E_WINGS[0], 1], [E_WINGS[0], E.baseTop + E.baseH], [0, E.baseTop + E.baseH], [0, E.baseTop]);
+    return pts;
+  })();
+  // 날개 2개짜리(5호관): 왼쪽 2개 날개 + 오른쪽 끝 C동 블록
+  const E2_WINGS = [0.0, 0.42];
+  const E2_OUTLINE = [[0, 0], [E.wingW, 0], [E.wingW, E.baseTop], [E2_WINGS[1], E.baseTop], [E2_WINGS[1], 0], [E2_WINGS[1] + E.wingW, 0],
+    [E2_WINGS[1] + E.wingW, E.baseTop], [1, E.baseTop], [1, 1], [0, 1]];
+  function buildE(fl, cfg = { wings: E_WINGS, names: ['A', 'B', 'C'] }) {
+    const cells = [], fixtures = [], corridors = [], labels = [];
+    const names = cfg.names;
+    cfg.wings.forEach((x0, wi) => {
+      const w = fl[names[wi]] || {};
+      const hasTop = w.top && w.top.length;
+      const top = hasTop ? E.topH : E.wingTop;
+      const fixH = 0.07;
+      // 꼭대기
+      if (hasTop) { const cw = E.wingW / w.top.length; w.top.forEach((id, i) => cells.push({ id, x: x0 + i * cw, y: 0, w: cw, h: E.topH })); }
+      // 왼쪽 열: 맨 위 WC, 그 아래 호실(아래→위), 맨 아래 WC
+      fixtures.push({ type: 'wc', x: x0, y: top, w: E.colW, h: fixH });
+      fixtures.push({ type: 'wc', x: x0, y: E.wingBottom - fixH, w: E.colW, h: fixH });
+      const col = (ids, cx, yTop, yBot) => {
+        if (!ids || !ids.length) return;
+        const h = (yBot - yTop) / ids.length;
+        ids.forEach((id, i) => cells.push({ id, x: cx, y: yBot - (i + 1) * h, w: E.colW, h }));
+      };
+      col(w.L, x0, top + fixH, E.wingBottom - fixH);
+      // 오른쪽 열: 맨 위 EV+계단, 호실, 맨 아래 계단+EV(베이스 쪽)
+      const rx = x0 + E.wingW - E.colW;
+      fixtures.push({ type: 'st', x: rx, y: top, w: E.colW * 0.55, h: fixH });
+      fixtures.push({ type: 'ev', x: rx + E.colW * 0.55, y: top, w: E.colW * 0.45, h: fixH });
+      col(w.R, rx, top + fixH, E.wingBottom);
+      corridors.push({ x: x0 + E.colW, y: top, w: E.wingW - 2 * E.colW, h: E.baseTop - top });
+      fixtures.push({ type: 'st', x: x0 + E.colW, y: E.baseTop, w: E.wingW - 2 * E.colW, h: 0.05 });
+      fixtures.push({ type: 'ev', x: x0 + E.colW, y: E.baseTop + 0.05, w: E.wingW - 2 * E.colW, h: 0.035 });
+      // 발(돌출부): 베이스 아래 2x2
+      if (w.foot && w.foot.length) {
+        const n = w.foot.length, cols = Math.ceil(n / 2), cw = E.wingW / cols, ch = E.footH / 2;
+        w.foot.forEach((id, i) => cells.push({ id, x: x0 + Math.floor(i / 2) * cw, y: E.baseTop + E.baseH + (i % 2) * ch, w: cw, h: ch }));
+      }
+    });
+    // 베이스 복도 + 양쪽 줄 (전체 폭에 걸쳐)
+    corridors.push({ x: 0, y: E.baseTop + 0.085, w: 1, h: 0.05 });
+    const rowAt = (ids, y, h) => {
+      if (!ids || !ids.length) return;
+      const units = ids.reduce((s, it) => s + (it === '#_' ? 0.9 : 1), 0), unit = 1 / units;
+      let x = 0;
+      ids.forEach((it) => { const cw = unit * (it === '#_' ? 0.9 : 1); if (it !== '#_') cells.push({ id: it, x, y, w: cw, h }); x += cw; });
+    };
+    rowAt(fl.base_top, E.baseTop, 0.085);
+    rowAt(fl.base_bot, E.baseTop + 0.135, 0.085);
+    names.forEach((n, i) => { if (i < cfg.wings.length) labels.push({ x: cfg.wings[i] + E.wingW / 2, y: 1, dy: 4, text: n + '동' }); });
+    // 오른쪽 끝 별동 블록 (5호관 C동): 2열 격자
+    if (fl.end && fl.end.length) {
+      const x0 = cfg.wings[cfg.wings.length - 1] + E.wingW + 0.04, bw = 1 - x0, rows = Math.ceil(fl.end.length / 2);
+      const cw = bw / 2, ch = Math.min(0.12, (1 - E.baseTop - 0.26) / rows);
+      fixtures.push({ type: 'st', x: x0, y: E.baseTop + 0.02, w: 0.09, h: 0.06 });
+      fixtures.push({ type: 'wc', x: x0 + 0.1, y: E.baseTop + 0.02, w: 0.07, h: 0.06 });
+      fixtures.push({ type: 'ev', x: x0 + 0.18, y: E.baseTop + 0.02, w: 0.05, h: 0.06 });
+      fl.end.forEach((id, i) => cells.push({ id, x: x0 + (i % 2) * cw, y: E.baseTop + 0.1 + Math.floor(i / 2) * ch, w: cw, h: ch }));
+      labels.push({ x: x0 + bw / 2, y: 1, dy: 4, text: names[cfg.wings.length] + '동' });
+    }
+    return { cells: splitCells(cells), fixtures, corridors, labels, entrance: fl.entrance ? { x: cfg.wings[Math.min(1, cfg.wings.length - 1)] + E.wingW / 2, y: 1 } : null };
+  }
+
+  const LAYOUTS = {
+    U: { outline: U_OUTLINE, build: buildU }, I: { outline: I_OUTLINE, build: buildI },
+    E: { outline: E_OUTLINE, build: buildE },
+    E2: { outline: E2_OUTLINE, build: (fl) => buildE(fl, { wings: E2_WINGS, names: ['A', 'B', 'C'] }) },
+  };
 
   // ---------- 건물 ----------
   function footprintPx(b) {
@@ -245,6 +326,7 @@
     layer.innerHTML = '';
     if (!fl) return null;
     g.classList.add('indoor-on');
+    document.querySelector(`.bldg-label[data-id="${id}"]`)?.classList.add('indoor-on');
     const L = LAYOUTS[plan.layout], built = L.build(fl);
     const W = b.w, H = b.h, rot = b.rot || 0;
     const px = (x) => x * W - W / 2, py = (y) => y * H - H / 2;
@@ -308,6 +390,7 @@
     const g = shapesById[id];
     if (!g) return;
     g.classList.remove('indoor-on');
+    document.querySelector(`.bldg-label[data-id="${id}"]`)?.classList.remove('indoor-on');
     g.querySelector('.indoor').innerHTML = '';
   };
 

@@ -235,25 +235,38 @@
   // 검색어 해석: "7호관 403호", "정보기술대학 403", "14호관202", "403" 모두 지원
   //  - 끝에 오는 3자리 이상 숫자(B105, 506-1 포함)를 호실로, 그 앞부분을 건물로 봄
   const bldgMatches = (b, part) => (b.name + b.sub).replace(/\s/g, '').toUpperCase().includes(part);
+  //  - "11호관 식당" 처럼 이름 붙은 공간도 찾음: 건물 이름/소제목이 검색어 앞부분과 일치하면 나머지를 호실(이름)로 봄
+  const normKey = (s) => (s || '').replace(/\s/g, '').toUpperCase();
   function searchHits(raw) {
-    const q = raw.replace(/\s/g, '').toUpperCase();
-    const m = q.match(/(B?\d{3,}(?:-\d+)?)호?$/);
-    const roomPart = m ? m[1] : null;
-    const bldgPart = m ? q.slice(0, m.index) : q;
+    const q = normKey(raw);
     const hits = [];
-    if (!roomPart || !bldgPart) {
+    // 1) 건물 이름/소제목으로 시작하는 검색어 → 그 건물 안에서 나머지 글자로 호실 검색
+    const scoped = [];
+    BUILDINGS.forEach((b) => {
+      [b.name, b.sub].map(normKey).filter(Boolean).forEach((k) => {
+        if (q.startsWith(k) && q.length > k.length) scoped.push({ id: b.id, part: q.slice(k.length).replace(/호$/, '') });
+      });
+    });
+    // 2) 숫자 호실만 ("403", "정보403") → 전체 또는 부분 일치 건물에서 검색
+    const m = q.match(/(B?\d{3,}(?:-\d+)?)호?$/);
+    let roomPart = null, scope = null;
+    if (scoped.length) { roomPart = scoped[0].part; scope = scoped.map((s) => s.id); }
+    else if (m) { roomPart = m[1]; const bp = q.slice(0, m.index); scope = bp ? BUILDINGS.filter((b) => bldgMatches(b, bp)).map((b) => b.id) : null; }
+    else if (!/^\d/.test(q) && q.length >= 2 && !BUILDINGS.some((b) => bldgMatches(b, q))) { roomPart = q; } // "식당" 처럼 이름만
+
+    if (!roomPart || (!scoped.length && !m)) {
       BUILDINGS.filter((b) => bldgMatches(b, q)).forEach((b) => hits.push({ type: 'building', id: b.id, b }));
     }
     if (roomPart) {
-      const scope = bldgPart ? BUILDINGS.filter((b) => bldgMatches(b, bldgPart)).map((b) => b.id) : null;
       findRooms(roomPart)
         .filter((r) => !scope || scope.includes(r.buildingId))
-        .sort((a, b) => (a.room === roomPart ? 0 : 1) - (b.room === roomPart ? 0 : 1)) // 정확히 일치하는 호실 먼저
+        .sort((a, b) => (normKey(a.room) === roomPart ? 0 : 1) - (normKey(b.room) === roomPart ? 0 : 1)) // 정확히 일치하는 호실 먼저
         .slice(0, 12)
         .forEach((r) => hits.push({ type: 'room', id: r.buildingId, floor: r.floor, room: r.room, b: BUILDINGS.find((x) => x.id === r.buildingId) }));
     }
     return hits;
   }
+  const roomLabel = (id) => (/^B?\d/.test(id) ? `${id}호` : id);
   function renderResults() {
     const q = input.value.trim().replace(/\s/g, '');
     results.innerHTML = '';
@@ -264,7 +277,7 @@
     hits.forEach((h) => {
       const li = document.createElement('li');
       li.innerHTML = h.type === 'room'
-        ? `<span class="tag">${h.floor}</span>${h.room}호<small>${h.b.name}</small>`
+        ? `<span class="tag">${h.floor}</span>${roomLabel(h.room)}<small>${h.b.name}</small>`
         : `${h.b.name}${h.b.sub ? `<small>${h.b.sub}</small>` : ''}`;
       li.addEventListener('mousedown', () => pick(h));
       results.appendChild(li);

@@ -77,6 +77,7 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ---- 실내(호실) 레이어 ---- */
 .bldg.indoor-on .roof { fill: #fafbfd; }
+.bldg-label.indoor-on .lbl-wing { display: none; } /* 실내 모드에선 레이아웃 자체의 동 표시를 씀 */
 .bldg.indoor-on .windows { display: none; }
 .indoor .floor-base { fill: #f7f8fa; stroke: #3b3b3b; stroke-width: 1.2; stroke-linejoin: round; }
 .indoor .corridor { fill: #e9ecf1; }
