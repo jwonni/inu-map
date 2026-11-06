@@ -27,4 +27,5 @@ assert.equal(rules.valid(JSON.parse(JSON.stringify(event))), true);
 assert.equal(rules.valid({ ...event, location: { kind: 'room', buildingId: 'it', floor: '3F', room: '305', label: '7호관 305호', x: 586, y: 495 } }), true);
 assert.equal(rules.valid({ ...event, location: { ...event.location, kind: 'building', buildingId: 'missing' } }), false);
 assert.equal(rules.clock(new Date('2026-12-31T15:00:00Z')).day, '2027-01-01');
-console.log('Passed 19 event date, time, location and persistence validation checks.');
+assert.equal(rules.valid({ ...event, location: { kind: 'room', buildingId: 'b11', floor: '1F', room: '식당', label: '11호관 1F 식당', x: 438, y: 495 } }), true);
+console.log('Passed 20 event date, time, location and persistence validation checks.');
