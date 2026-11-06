@@ -16,9 +16,17 @@
 
 | 건물 | id | 레이아웃 | 층 |
 |---|---|---|---|
+| 5호관 | `b5` | E2 (날개 2개 + C동) | 1F~5F |
 | 정보기술대학(7호관) | `it` | U자형 | B1, 1F~5F |
+| 8호관 (A·B·C동) | `b8` | E자형 (날개 3개) | 1F~5F |
+| 11호관(학생회관) | `b11` | 일자형 | 1F~4F |
+| 12호관(컨벤션센터) | `b12` | 일자형 | 1F~5F |
 | 13호관 | `b13` | 일자형 | 1F~5F (B1은 번호 없음) |
 | 14호관(경영대학·동북아) | `nea` | 일자형 | 1F~5F |
+| 15호관(인문대학) | `b15` | 일자형 | 1F~5F |
+| 16호관(예능대학) | `b16` | 일자형 | 1F~4F |
+| 17호관(복지회관) | `b17` | 일자형 (H자형을 펼침) | 1F~4F |
+| 도서관 | `lib` | 자유 좌표 | B1, 1F~4F |
 
 나머지 건물은 윤곽과 이름만 있습니다.
 
@@ -28,14 +36,17 @@
 index.html          화면 뼈대
 style.css           스타일 (층 선택기, 실내 레이어 색 등)
 app.js              지도 확대/이동, 건물 선택, 층 전환, 검색
-renderer.js         SVG 렌더러 + 레이아웃 생성기 (U자형 / 일자형)
+renderer.js         SVG 렌더러 + 레이아웃 생성기 (U / I / E / E2)
 data/buildings.js   건물 목록: 이름, 좌표, 크기, 회전, 층 목록
 data/floorplans.js  층별 호실 배치 (배치도 안내판을 옮겨 적은 것)
 data/footprints.js  건물 윤곽 다각형 (자동 추출)
 data/mapFeatures.js 지형, 도로, 운동시설
 assets/map.png      윤곽 추출에 쓴 원본 지도 캡처 (화면에는 쓰이지 않음)
-assets/signs/       배치도 안내판 사진 원본
+assets/signs/       배치도 안내판 사진 원본. 건물 id 폴더 아래 층별(1F.jpg …) 또는 전체.jpg / A동.jpg
+assets/reference/   캠퍼스 지도 참고 자료 (export.geojson, map-1~3.png)
 ```
+
+`assets/signs/` 와 `assets/reference/` 는 화면에 쓰이지 않는 원본 자료입니다(약 90MB). 데이터를 고칠 때 대조용으로만 쓰입니다.
 
 ## 건물 추가하는 법
 
@@ -43,9 +54,13 @@ assets/signs/       배치도 안내판 사진 원본
    캠퍼스 격자는 `AX`(31°)와 `AY`(−59°) 두 방향입니다.
 2. `data/floorplans.js` 에 같은 id 로 층별 호실을 적습니다.
    - **U자형** (`layout: 'U'`): `A_outer`, `A_inner`, `B_inner`, `B_outer`, `top_A`, `top_B`, `base`, `A_corner`, `B_corner`
-   - **일자형** (`layout: 'I'`): `top`, `bottom` 을 왼쪽→오른쪽 순서로
+   - **일자형** (`layout: 'I'`): `top`, `bottom` 을 왼쪽→오른쪽 순서로. `corridor: false` 로 가운데 복도를 끄고
+     `free: [{ id, x, y, w, h }]` / `fixtures: [{ type, x, y, w, h }]` 로 좌표(0~1)를 직접 줄 수도 있습니다(도서관).
+   - **E자형** (`layout: 'E'` 날개 3개 / `'E2'` 날개 2개): 날개마다 `A/B/C: { L, R, top, foot }`,
+     베이스 줄은 `base_top`, `base_bot`, 오른쪽 끝 별동은 `end`
    - 행 안에 `'#st'`(계단) `'#wc'`(화장실) `'#ev'`(엘리베이터) `'#_'`(빈 복도) 토큰을 섞어 쓸 수 있습니다.
    - `['109', '110']` 처럼 배열을 넣으면 한 칸을 둘로 나눕니다.
+   - 원본 안내판 사진은 `assets/signs/<id>/` 에 같이 넣어 두세요.
 3. 새 건물 모양이 필요하면 `renderer.js` 의 `LAYOUTS` 에 생성기를 하나 추가합니다.
 
 ## 조정 포인트
