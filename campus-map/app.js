@@ -42,7 +42,7 @@
     }, { passive: false });
     container.addEventListener('pointerdown', (e) => {
       moved = false;
-      if (e.target.closest('button, .floor-picker, .event-marker') || window.campusEventPlacement) return;
+      if (e.target.closest('button, .floor-picker, .event-marker')) return;
       drag = { x: e.clientX, y: e.clientY, sx: s.x, sy: s.y };
       moved = false;
     });
@@ -56,7 +56,9 @@
       s.y = drag.sy + dy;
       apply();
     });
-    window.addEventListener('pointerup', () => { drag = null; container.classList.remove('dragging'); });
+    const endPan = () => { drag = null; container.classList.remove('dragging'); };
+    window.addEventListener('pointerup', endPan);
+    window.addEventListener('pointercancel', endPan);
 
     const zoomCenter = (f) => { const r = container.getBoundingClientRect(); zoomAt(f, r.width / 2, r.height / 2); };
     return { zoomCenter, fit, centerOn, wasDragged: () => moved, state: s };
@@ -79,6 +81,7 @@
     min: 0.4, max: 10,
     onChange: (s) => { // 확대해도 라벨/핀은 화면 크기 그대로
       mapSvg.style.setProperty('--inv', 1 / s.scale);
+      map.style.setProperty('--inv', 1 / s.scale);
       pin.style.fontSize = `${30 / s.scale}px`;
     },
   });
@@ -116,7 +119,6 @@
 
   // ---------- 하단 카드 + 실내 호실 ----------
   const panel = $('#panel');
-  const roomInfo = $('#roomInfo');
   const roomHint = $('#roomHint');
   let current = null;
   let currentFloor = 0;
@@ -168,12 +170,7 @@
   function highlightRoom(id) {
     if (activeRoom) activeRoom.classList.remove('active');
     activeRoom = rooms && rooms[id] ? rooms[id] : null;
-    if (activeRoom) {
-      activeRoom.classList.add('active');
-      $('#roomName').textContent = /^B?\d/.test(id) ? `${id}호` : id;
-      $('#roomWhere').textContent = `${current.floors[currentFloor].name}`;
-      roomInfo.classList.add('show');
-    } else roomInfo.classList.remove('show');
+    if (activeRoom) activeRoom.classList.add('active');
     announceLocation(id);
   }
 
@@ -190,7 +187,6 @@
     if (location.hash !== hash) history.replaceState(null, '', hash);
 
     rooms = null; activeRoom = null;
-    roomInfo.classList.remove('show');
     if (hasFloorplan(current.id, f.name)) {
       rooms = renderIndoor(current.id, f.name, (id) => { if (!mapPZ.wasDragged()) highlightRoom(id); });
       roomHint.classList.remove('show');
@@ -201,6 +197,7 @@
     }
     // 층을 바꾸면 이전 호실 선택도 해제합니다.
     updateGuide();
+    document.dispatchEvent(new CustomEvent('campus-view'));
     if (window.campusEventEditing) announceLocation();
   }
 
@@ -210,10 +207,10 @@
     BUILDINGS.forEach((x) => x._el.classList.remove('active'));
     if (current) clearIndoor(current.id);
     rooms = null; activeRoom = null;
-    roomInfo.classList.remove('show');
     pin.style.display = 'none';
     current = null;
     updateGuide();
+    document.dispatchEvent(new CustomEvent('campus-view'));
     history.replaceState(null, '', location.pathname);
   }
   $('#closeBtn').addEventListener('click', closePanel);
@@ -317,11 +314,19 @@
     $('#enterBuilding').textContent = b ? '캠퍼스 전체로 돌아가기 ↗' : '7호관 내부 보기 ↗';
     $('#guideDetailTitle').textContent = roomId ? roomLabel(roomId) : b ? `${b.name} · ${b.floors[currentFloor].name}` : '같은 지도, 더 가까이';
     $('#guideDetailText').textContent = roomId ? '선택한 호실을 지도에서 강조했습니다. 다른 층도 층 선택기로 확인해 보세요.' : b ? (hasFloorplan(b.id, b.floors[currentFloor].name) ? '호실을 누르면 위치를 확인할 수 있습니다. 층 버튼으로 다른 층을 둘러보세요.' : '이 층의 호실 정보는 준비 중입니다.') : '건물을 누르고 층을 선택해 호실 배치를 확인하세요. 호실 번호로 검색하면 원하는 위치로 바로 이동합니다.';
-    $('#mapCaption').textContent = b ? `${b.name} · ${b.floors[currentFloor].name}` : '캠퍼스 전체';
-    $('#mapSubcaption').textContent = roomId ? `${roomLabel(roomId)}를 선택했습니다` : b ? '호실을 눌러 위치를 확인하세요' : '건물을 클릭하면 실내 지도가 표시됩니다';
+    $('#mapCaption').textContent = b ? (roomId ? `${roomLabel(roomId)} · ${b.name}` : `${b.name} · ${b.floors[currentFloor].name}`) : '캠퍼스 전체';
+    $('#mapSubcaption').textContent = roomId ? `${b.sub ? b.sub + ' · ' : ''}${b.floors[currentFloor].name} · 선택한 호실` : b ? '호실을 눌러 위치를 확인하세요' : '건물을 클릭하면 실내 지도가 표시됩니다';
   }
   $('#enterBuilding').addEventListener('click', () => { if (current) { closePanel(); fitMap(); } else openBuilding('it'); });
-  $('#homeMap').addEventListener('click', () => { closePanel(); fitMap(); });
+  const sidebar = $('#guideSidebar');
+  window.setSidebarOpen = (open) => {
+    document.body.classList.toggle('sidebar-collapsed', !open);
+    sidebar.inert = !open;
+    $('#toggleSidebar').setAttribute('aria-expanded', open);
+    $('#toggleSidebar').setAttribute('aria-label', open ? '왼쪽 패널 접기' : '왼쪽 패널 펼치기');
+    $('#toggleSidebar').textContent = open ? '‹' : '›';
+  };
+  $('#toggleSidebar').addEventListener('click', () => setSidebarOpen(document.body.classList.contains('sidebar-collapsed')));
   document.querySelectorAll('[data-building]').forEach(button => button.addEventListener('click', () => openBuilding(button.dataset.building)));
   $('#submitSearch').addEventListener('click', () => { const hits = searchHits(input.value.trim()); if (hits.length) pick(hits[Math.max(0, activeIdx)]); else { input.focus(); renderResults(); } });
 
@@ -338,6 +343,7 @@
   }
   window.campusMap = {
     fit: fitMap, close: closePanel,
+    view: () => ({ buildingId: current?.id, floor: current?.floors[currentFloor]?.name }),
     center: (x, y) => mapPZ.centerOn(x, y, Math.max(1.3, Math.min(mapPZ.state.scale, 3))),
     point: (x, y) => { const r = map.getBoundingClientRect(); return { x: (x - r.left) / mapPZ.state.scale, y: (y - r.top) / mapPZ.state.scale }; },
     wasDragged: mapPZ.wasDragged,

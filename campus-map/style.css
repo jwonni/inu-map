@@ -163,14 +163,6 @@ button { font-family: inherit; cursor: pointer; }
 .floor-tabs button.active small { color: #dbe6ff; }
 .floor-tabs button.no-plan { color: #b5b9c0; }
 
-.room-info {
-  display: none; flex-direction: column; align-items: center; margin-top: 10px; padding: 5px 10px;
-  border-radius: 10px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.18); font-size: 11px;
-  border: 2px solid #ffd54a;
-}
-.room-info.show { display: flex; }
-.room-info b { font-size: 14px; color: #222; }
-.room-info span { color: var(--muted); }
 .room-hint { display: none; margin-top: 8px; font-size: 10px; color: #999; text-align: center; white-space: nowrap; }
 .room-hint.show { display: block; }
 
