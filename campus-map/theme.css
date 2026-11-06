@@ -184,3 +184,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline-colo
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .place-icon-button { width: 100%; margin-top: 8px; border: 1px solid #aabda9; border-radius: 8px; padding: 10px; background: #fffef7; color: #395e48; font-size: 12px; }
 .place-icon-button[aria-pressed="true"] { border-color: #395e48; background: #e8efde; }
+
+.quick-guide-hint { color: #819079; font-size: 11px; margin: 0 0 8px; }
+.quick-guide-list strong { font-weight: 400; }
+.quick-guide-list button:hover { background: #edf0e5; border-radius: 6px; }

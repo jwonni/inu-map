@@ -268,6 +268,8 @@
     E2: { outline: E2_OUTLINE, build: (fl) => buildE(fl, { wings: E2_WINGS, names: ['A', 'B', 'C'] }) },
   };
 
+  window.LAYOUTS = LAYOUTS; // tools/build_indoor.mjs 등 외부에서 레이아웃 생성기만 쓸 수 있게 노출
+
   // ---------- 건물 ----------
   function footprintPx(b) {
     // 추출한 윤곽 우선. footprint:'layout' 이면 레이아웃 윤곽, 둘 다 없으면 사각형

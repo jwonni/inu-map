@@ -327,7 +327,18 @@
     $('#toggleSidebar').textContent = open ? '‹' : '›';
   };
   $('#toggleSidebar').addEventListener('click', () => setSidebarOpen(document.body.classList.contains('sidebar-collapsed')));
-  document.querySelectorAll('[data-building]').forEach(button => button.addEventListener('click', () => openBuilding(button.dataset.building)));
+  // 전체 건물 데이터에서 자동 생성하므로 건물을 추가해도 바로가기가 누락되지 않습니다.
+  const buildingNumber = b => (b.name.match(/(\d+(?:-\d+)?)호관/) || b.sub.match(/(\d+(?:-\d+)?)호관/))?.[1] || 'INU';
+  [...BUILDINGS].sort((a, b) => buildingNumber(a).localeCompare(buildingNumber(b), 'ko', { numeric: true })).forEach(b => {
+    const button = document.createElement('button'); button.type = 'button'; button.dataset.building = b.id;
+    const number = document.createElement('span'); number.textContent = buildingNumber(b).padStart(2, '0');
+    const name = document.createElement('strong'); name.textContent = /^\d.*호관$/.test(b.name) && b.sub ? b.sub : b.name;
+    const arrow = document.createElement('b'); arrow.textContent = '↗'; arrow.setAttribute('aria-hidden', 'true');
+    button.setAttribute('aria-label', [b.name, b.sub].filter(Boolean).join(' · ') + ' 보기');
+    button.append(number, name, arrow);
+    button.addEventListener('click', () => openBuilding(b.id));
+    $('#quickGuide').append(button);
+  });
   $('#submitSearch').addEventListener('click', () => { const hits = searchHits(input.value.trim()); if (hits.length) pick(hits[Math.max(0, activeIdx)]); else { input.focus(); renderResults(); } });
 
   function announceLocation(roomId) {
