@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[임시] 7호관 정보기술대학 세부 — inu-campus-map 기반</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; color: #222; height: 100vh; display: grid; grid-template-rows: 52px 1fr; }
+  header { display: flex; align-items: center; gap: 14px; padding: 0 16px; border-bottom: 1px solid #e5e8eb; background: #fff; }
+  header b { font-size: 16px; } header .tmp { color: #e74c3c; font-size: 12px; } header .hint { color: #888; font-size: 12px; margin-left: auto; }
+  main { display: grid; grid-template-columns: 1fr 460px; min-height: 0; }
+  #map { height: 100%; background: #e9eef5; }
+  aside { border-left: 1px solid #e5e8eb; overflow-y: auto; padding: 14px; background: #fafbfc; }
+  .floors { display: flex; gap: 6px; margin-bottom: 12px; }
+  .floors button { flex: 1; height: 38px; border: 1px solid #d5d8dc; border-radius: 8px; background: #fff; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .floors button.on { background: #1e6ff2; border-color: #1e6ff2; color: #fff; }
+  .sign { width: 100%; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
+  h3 { font-size: 13px; color: #666; margin: 14px 0 6px; }
+  .rooms { display: flex; flex-wrap: wrap; gap: 4px; }
+  .rooms button { border: 1px solid #c9d6ea; background: #eaf2ff; border-radius: 6px; padding: 3px 8px; font-size: 12px; cursor: pointer; }
+  .rooms button.on { background: #ffd54a; border-color: #c98a00; }
+  .note { font-size: 12px; color: #777; line-height: 1.6; margin-top: 12px; }
+  .note code { background: #eee; padding: 0 4px; border-radius: 3px; }
+  .rl { font-size: 11px; font-weight: 700; color: #1f2d4a; white-space: nowrap; transform: translate(-50%,-50%); text-shadow: 0 0 3px #fff, 0 0 3px #fff; }
+  .rl.fx { color: #8a5a12; font-size: 10px; } .rl.wc { color: #1d4f9c; } .rl.area { color: #556; font-weight: 600; }
+  .rl.wing { font-size: 12px; color: #8a93a3; }
+  .leaflet-container { font: inherit; }
+</style>
+</head>
+<body>
+<header><b>7호관 정보기술대학 — 실내 배치 검토</b><span class="tmp">[임시 페이지]</span>
+  <span class="hint">지도의 호실 또는 오른쪽 목록을 누르면 강조 · 오른쪽 사진은 안내판 원본</span></header>
+<main>
+  <div id="map"></div>
+  <aside>
+    <div class="floors" id="floors"></div>
+    <img class="sign" id="sign" alt="안내판 원본">
+    <h3>호실 목록 (<span id="cnt"></span>)</h3>
+    <div class="rooms" id="rooms"></div>
+    <div class="note" id="note"></div>
+  </aside>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data/buildings.js"></script>
+<script src="data/footprints.js"></script>
+<script src="data/floorplans.js"></script>
+<script src="data/it-osm.js"></script>
+<script src="renderer.js"></script>
+<script>
+(() => {
+  const KX = 88700, KY = 111000;                 // m/deg (inu-campus-map 과 동일)
+  const B = IT_OSM, plan = FLOORPLANS.it, L_ = LAYOUTS[plan.layout];
+  const bcfg = BUILDINGS.find((b) => b.id === 'it');
+
+  // ---- OSM 폴리곤에서 U자 축 구하기: 가장 긴 변 = 날개 방향(v), 그 수직 = 폭 방향(u).
+  //      v 의 부호는 폴리곤 무게중심이 bbox 중심보다 베이스 쪽으로 치우친다는 성질로 정한다.
+  const P = B.poly.map(([lat, lon]) => [(lon - B.c[1]) * KX, (lat - B.c[0]) * KY]); // (east, north) m
+  let best = [0, 0];
+  for (let i = 0; i < P.length - 1; i++) { const dx = P[i + 1][0] - P[i][0], dy = P[i + 1][1] - P[i][1], l = Math.hypot(dx, dy); if (l > best[0]) best = [l, Math.atan2(dy, dx)]; }
+  let ev = [Math.cos(best[1]), Math.sin(best[1])], eu = [-ev[1], ev[0]];
+  const proj = (p, e) => p[0] * e[0] + p[1] * e[1];
+  const us = P.map((p) => proj(p, eu)), vs = P.map((p) => proj(p, ev));
+  const cen = [P.reduce((s, p) => s + p[0], 0) / P.length, P.reduce((s, p) => s + p[1], 0) / P.length];
+  if (proj(cen, ev) < (Math.min(...vs) + Math.max(...vs)) / 2) { ev = ev.map((x) => -x); vs.forEach((v, i) => (vs[i] = -v)); }
+  // u 의 부호: A동(x=0)이 어느 날개인지는 안내판에 방위가 없어 buildings.js 의 rot 방향(남서쪽=A)을 따른다
+  if (eu[0] + eu[1] < 0) { eu = eu.map((x) => -x); us.forEach((u, i) => (us[i] = -u)); }
+  const umin = Math.min(...us), umax = Math.max(...us), vmin = Math.min(...vs), vmax = Math.max(...vs);
+  const toLL = (x, y) => { const u = umin + x * (umax - umin), v = vmin + y * (vmax - vmin);
+    const e = u * eu[0] + v * ev[0], n = u * eu[1] + v * ev[1]; return [B.c[0] + n / KY, B.c[1] + e / KX]; };
+  const rect = (c) => [toLL(c.x, c.y), toLL(c.x + c.w, c.y), toLL(c.x + c.w, c.y + c.h), toLL(c.x, c.y + c.h)];
+  const mid = (c) => toLL(c.x + c.w / 2, c.y + c.h / 2);
+
+  // ---- 지도
+  const map = L.map('map', { zoomControl: true, minZoom: 16, maxZoom: 22, zoomSnap: 0.25 });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nobg/{z}/{x}/{y}{r}.png', { maxZoom: 22, attribution: '© OpenStreetMap, © CARTO' }).addTo(map);
+  L.polygon(B.poly, { color: '#7d776a', weight: 2, fillColor: '#f1ecd9', fillOpacity: 1 }).addTo(map);
+  L.polygon(L_.outline.map(([x, y]) => toLL(x, y)), { color: '#1e6ff2', weight: 1.5, dashArray: '4 3', fill: false }).addTo(map).bindTooltip('레이아웃 프레임 (U자)', { permanent: false });
+  B.ent.forEach((ll) => L.circleMarker(ll, { radius: 4, color: '#03c75a', fillColor: '#fff', fillOpacity: 1, weight: 2 }).addTo(map).bindTooltip('OSM 출입구'));
+  map.fitBounds(L.latLngBounds(B.poly), { padding: [30, 30] });
+
+  const layer = L.layerGroup().addTo(map);
+  const ST = { room: { fillColor: '#cfe3ff', color: '#5c7cae' }, area: { fillColor: '#e3e7ee', color: '#9aa3b2', dashArray: '3 2' },
+    st: { fillColor: '#fbe3b8', color: '#d39a3b' }, wc: { fillColor: '#2f6fd1', color: '#1d4f9c' }, ev: { fillColor: '#dbe7fb', color: '#6f9be0' }, corr: { fillColor: '#e9ecf1', color: '#e9ecf1' } };
+  const FX = { st: '계단', wc: 'WC', ev: 'EV' };
+  const floors = bcfg.floors.map((f) => f.name).filter((f) => plan.floors[f]);
+  let cur = null, sel = null, shapes = {};
+  const label = (ll, txt, cls) => L.marker(ll, { interactive: false, icon: L.divIcon({ className: '', iconSize: null, html: `<div class="rl ${cls || ''}">${txt}</div>` }) });
+
+  function draw(f) {
+    cur = f; layer.clearLayers(); shapes = {}; sel = null;
+    document.querySelectorAll('#floors button').forEach((b) => b.classList.toggle('on', b.dataset.f === f));
+    document.getElementById('sign').src = `assets/signs/it/${f}.jpg`;
+    const built = L_.build(plan.floors[f]);
+    built.corridors.forEach((c) => L.polygon(rect(c), { ...ST.corr, weight: 1, fillOpacity: 1, interactive: false }).addTo(layer));
+    built.fixtures.forEach((x) => { L.polygon(rect(x), { ...ST[x.type], weight: 1, fillOpacity: 1, interactive: false }).addTo(layer); label(mid(x), FX[x.type], x.type === 'wc' ? 'wc' : 'fx').addTo(layer); });
+    const list = document.getElementById('rooms'); list.innerHTML = '';
+    built.cells.forEach((c) => {
+      const pg = L.polygon(rect(c), { ...(c.kind === 'area' ? ST.area : ST.room), weight: 1, fillOpacity: 1 }).addTo(layer);
+      pg.on('click', () => pick(c.id)); shapes[c.id] = pg;
+      label(mid(c), c.id, c.kind === 'area' ? 'area' : '').addTo(layer);
+      const b = document.createElement('button'); b.textContent = c.id; b.dataset.id = c.id; b.onclick = () => { pick(c.id); map.panTo(mid(c)); }; list.appendChild(b);
+    });
+    built.labels.forEach((l) => label(toLL(l.x, l.y + 0.03), l.text, 'wing').addTo(layer));
+    if (built.entrance) label(toLL(built.entrance.x, built.entrance.y + 0.04), '▲ 입구(안내판 기준)', 'fx').addTo(layer);
+    document.getElementById('cnt').textContent = built.cells.length + '개';
+  }
+  function pick(id) {
+    if (sel && shapes[sel]) shapes[sel].setStyle({ fillColor: '#cfe3ff', color: '#5c7cae' });
+    sel = id; if (shapes[id]) shapes[id].setStyle({ fillColor: '#ffd54a', color: '#c98a00' });
+    document.querySelectorAll('#rooms button').forEach((b) => b.classList.toggle('on', b.dataset.id === id));
+  }
+  document.getElementById('floors').innerHTML = floors.map((f) => `<button data-f="${f}">${f}</button>`).join('');
+  document.getElementById('floors').onclick = (e) => { const b = e.target.closest('button'); if (b) draw(b.dataset.f); };
+  document.getElementById('note').innerHTML =
+    `프레임: 폭 ${(umax - umin).toFixed(0)}m × 길이 ${(vmax - vmin).toFixed(0)}m, 날개 방향 ${(Math.atan2(ev[1], ev[0]) * 180 / Math.PI).toFixed(1)}° (동쪽 기준 반시계).<br>` +
+    `OSM 폴리곤의 가장 긴 변을 날개 축으로 잡고 <code>data/floorplans.js</code> 의 U자 레이아웃을 그 위에 얹었습니다. ` +
+    `A동/B동 좌우는 안내판에 방위 표시가 없어 추정입니다(남서쪽 날개 = A동). 반대라면 <code>buildings.js</code> 의 <code>it.rot</code> 에 180 을 더하세요.<br>` +
+    `호실 데이터 수정 → <code>node tools/build_indoor.mjs</code> 로 본 페이지(inu-campus-map.html)에 반영.`;
+  draw(floors.includes('1F') ? '1F' : floors[0]);
+  window._it = { draw, pick, map };
+})();
+</script>
+</body>
+</html>

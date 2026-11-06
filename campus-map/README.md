@@ -48,6 +48,20 @@ assets/reference/   캠퍼스 지도 참고 자료 (export.geojson, map-1~3.png)
 
 `assets/signs/` 와 `assets/reference/` 는 화면에 쓰이지 않는 원본 자료입니다(약 90MB). 데이터를 고칠 때 대조용으로만 쓰입니다.
 
+## inu-campus-map.html (Leaflet 길찾기 지도)에 호실 붙이기
+
+`inu-campus-map.html` 은 OSM 위경도 기반의 별도 페이지(길찾기 포함)입니다. 여기에도 같은 호실 데이터가 표시됩니다.
+
+```
+node tools/build_indoor.mjs      # data/floorplans.js → data/indoor-gen.js
+```
+
+- `floorplans.js` 의 레이아웃 결과(0~1 좌표)를 OSM 건물 폴리곤에 맞춰 위경도로 변환합니다.
+  축은 `buildings.js` 의 `rot` 에 OSM 보정각(`data/roadnet.js` 의 변환)을 더해 정합니다.
+- 페이지는 `D.indoor`(손으로 딴 17호관, 경로 그래프 포함)와 `INDOOR_GEN` 을 합쳐 씁니다.
+  생성된 건물은 경로 그래프가 없어서 길찾기는 건물 입구까지만 안내하고, 호실은 층을 눌러 확인합니다.
+- 호실 데이터를 고치면 위 명령을 다시 실행하면 됩니다.
+
 ## 건물 추가하는 법
 
 1. `data/buildings.js` 에 항목 추가. `x, y` 는 지도 좌표(962×841), `w, h` 는 건물 크기, `rot` 는 회전각.
